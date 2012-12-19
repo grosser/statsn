@@ -8,11 +8,9 @@ Install
 Usage
 =====
 
-# Setup
+### Track
 
     require "statsn"
-
-# Track
 
     Statsn.increment("Custom/Xyz") -> tracked as "Custom/Xyz"
     Statsn.increment([Abc::Xyz, "update"]) -> tracked as "Custom/Abc/Xyz/update"
@@ -24,7 +22,7 @@ Usage
       sleep 1
     end
 
-# Analyze
+### Analyze
 
     # show all metrics and fields
     curl -H "x-api-key:API_KEY" https://api.newrelic.com/api/v1/applications/12345/metrics.json -> list of all metrics and fields
