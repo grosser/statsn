@@ -3,6 +3,10 @@ require "spec_helper"
 describe "statsn-calls" do
   let(:argv){ File.read("#{Bundler.root}/spec/argv.txt").strip }
 
+  before do
+    pending "create a spec/argv.txt" unless (argv rescue nil)
+  end
+
   it "gives us some numbers" do
     result = run("#{argv} Controller/api/v2/users/update")
     result.should =~ /^call_count: \d+/
