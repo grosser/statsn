@@ -3,6 +3,8 @@
 raise "Needs 1.9+" if RUBY_VERSION < "1.9.0"
 PERIOD = 24*60*60
 API_METRICS_LIMIT = 100
+class MissingFieldError < Exception
+end
 
 def stats(options)
   response = Faraday.new(
@@ -10,12 +12,20 @@ def stats(options)
     :params => options,
     :headers => {"x-api-key" => API_KEY}
   ).get
-  raise response.body unless response.status == 200
+
+  if response.status != 200
+    if response.body.include?("The field you use must be valid for at least one metric.")
+      raise MissingFieldError
+    else
+      raise response.body
+    end
+  end
+
   JSON.parse(response.body)
 end
 
-def aggregate(names, field)
-  names.each_slice(API_METRICS_LIMIT).map do |group|
+def aggregate(metric_names, field)
+  metric_names.each_slice(API_METRICS_LIMIT).map do |group|
     stats(:metrics => group, :field => field, :begin => Time.now - PERIOD, :end => Time.now)
   end.flatten(1)
 end
@@ -55,6 +65,14 @@ def metric_names(namespace)
   end
 end
 
+def data_for_field(metric_names, field)
+  metric_data = aggregate(metric_names, field)
+  metric_data = metric_data.group_by { |x| x["name"] }
+  metric_data.map { |_, values| values.inject(0) { |sum, x| sum + x[field] } }.inject(:+)
+rescue MissingFieldError
+  :missing_field
+end
+
 # Dependencies
 gem "json"
 gem "faraday"
@@ -72,22 +90,22 @@ end
 API_KEY, ACCOUNT_ID, APP_ID, namespace = ARGV
 
 # Data
-names = metric_names(namespace)
+metric_names = metric_names(namespace)
+
 results = ["call_count", "total_call_time"].map do |field|
-  metric_data = aggregate(names, field).group_by{ |x| x["name"] }
-  sums = metric_data.map{ |_, values| values.inject(0){ |sum,x| sum + x[field] } }.inject(:+)
-  [field, sums]
+  [field, data_for_field(metric_names, field)]
 end
 
 # Display results
 results = Hash[results]
-if results.values.first
-  call_time = results["total_call_time"]
-  call_count = results["call_count"]
-  puts results.map{|x|x.join(": ")}
-  puts "response time: #{call_time / call_count}"
+call_time = results["total_call_time"]
+call_count = results["call_count"]
+
+if call_time && call_count
+  puts results.reject{ |name,value| value == :missing_field }.map{ |x| x.join(": ") }
+  puts "response time: #{call_time / call_count}" unless call_time == :missing_field
   puts "call per second: #{call_count / PERIOD}"
 else
-  puts "No data found for #{names.join(", ")} in last #{PERIOD} seconds"
+  puts "No data found for #{metric_names.join(", ")} in last #{PERIOD} seconds"
   exit 1
 end

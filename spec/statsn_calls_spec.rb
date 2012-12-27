@@ -1,14 +1,14 @@
 require "spec_helper"
 
 describe "statsn-calls" do
-  let(:argv){ File.read("#{Bundler.root}/spec/argv.txt").strip }
+  let(:argv){ YAML.load File.read("#{Bundler.root}/spec/argv.yml") }
 
   before do
-    pending "create a spec/argv.txt" unless (argv rescue nil)
+    pending "create a spec/argv.yml" unless (argv rescue nil)
   end
 
   it "gives us some numbers" do
-    result = run("#{argv} Controller/api/v2/users/update")
+    result = run argv["single"]
     result.should =~ /^call_count: \d+/
     result.should =~ /^total_call_time: \d+/
     result.should =~ /^response time: \d+/
@@ -16,7 +16,7 @@ describe "statsn-calls" do
   end
 
   it "gives us some numbers for a prefix call" do
-    result = run("#{argv} Controller/api/v2/users/*")
+    result = run argv["multi"]
     result.should =~ /^call_count: \d+/
     result.should =~ /^total_call_time: \d+/
     result.should =~ /^response time: \d+/
@@ -33,9 +33,17 @@ describe "statsn-calls" do
     result.should include("statsn-calls API-KEY")
   end
 
+  it "show data for count-only metrics" do
+    result = run argv["count"]
+    result.should =~ /^call_count: \d+/
+    result.should_not =~ /^total_call_time: \d+/
+    result.should_not =~ /^response time: \d+/
+    result.should =~ /^call per second: \d+/
+  end
+
   it "tell us if the metric is missing" do
-    result = run("#{argv} Controller/xxxxxxx", :fail => true)
-    result.should include("No data found for Controller/xxxxxxx")
+    result = run("#{argv["single"]}/xxxx", :fail => true)
+    result.should include("No data found for Controller/")
   end
 
   private

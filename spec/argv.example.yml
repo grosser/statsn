@@ -1,0 +1,4 @@
+# keep exmaple up to date when chaning this!
+single: asdadsasddasads 123 123123 Controller/users/update
+multi: asdadsasddasads 123 123123 Controller/users/*
+count: asdadsasddasads 123 123123 Custom/xxx # must only have counts, no response time
