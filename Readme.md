@@ -27,18 +27,23 @@ Usage
     # show all metrics and fields
     curl -H "x-api-key:API_KEY" https://api.newrelic.com/api/v1/applications/12345/metrics.json -> list of all metrics and fields
 
-    # data e.g. with Faraday
-    def stats(account_id, application_id, options)
-      response = Faraday.new(
-        :url => "https://api.newrelic.com/api/v1/accounts/#{account_id}/applications/#{application_id}/data.json",
-        :params => options,
-        :headers => {"x-api-key" => API_KEY}
-      )
-      raise response.body unless response.status == 200
-      JSON.parse(response.body)
-    end
+    gem install faraday json
 
-    stats(183, 80164, :metrics => ["ActiveRecord/save"], :field => "average_response_time", :begin => 1.day.ago, :end => Time.now)
+    # statsn-calls API-KEY ACCOUNT-ID APPLICATION-ID METRIC-NAME
+    statsn-calls asdhgjasdgjhdasjgahsdasdjghsdjhg 123 1234567 Controller/users/index
+
+    call_count: 274909.0
+    total_call_time: 37585.77862974794
+    response time: 0.1367208008095331
+    call per second: 3.18181712962963
+
+    # statsn-calls API-KEY ACCOUNT-ID APPLICATION-ID METRIC-NAME-PREFIX
+    statsn-calls asdhgjasdgjhdasjgahsdasdjghsdjhg 123 1234567 Controller/users/*
+
+    call_count: 287300.0
+    total_call_time: 39330.15688060733
+    response time: 0.13689577751690682
+    call per second: 3.3252314814814814
 
 Author
 ======

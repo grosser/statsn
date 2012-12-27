@@ -9,5 +9,6 @@ Gem::Specification.new name, Statsn::VERSION do |s|
   s.homepage = "http://github.com/grosser/#{name}"
   s.files = `git ls-files`.split("\n")
   s.license = "MIT"
+  s.executables = ["statsn-calls"]
   s.add_runtime_dependency "newrelic_rpm", "~> 3.5"
 end

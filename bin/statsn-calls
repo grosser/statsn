@@ -1,0 +1,93 @@
+#!/usr/bin/env ruby
+
+raise "Needs 1.9+" if RUBY_VERSION < "1.9.0"
+PERIOD = 24*60*60
+API_METRICS_LIMIT = 100
+
+def stats(options)
+  response = Faraday.new(
+    :url => "https://api.newrelic.com/api/v1/accounts/#{ACCOUNT_ID}/applications/#{APP_ID}/data.json",
+    :params => options,
+    :headers => {"x-api-key" => API_KEY}
+  ).get
+  raise response.body unless response.status == 200
+  JSON.parse(response.body)
+end
+
+def aggregate(names, field)
+  names.each_slice(API_METRICS_LIMIT).map do |group|
+    stats(:metrics => group, :field => field, :begin => Time.now - PERIOD, :end => Time.now)
+  end.flatten(1)
+end
+
+def metrics
+  response = `curl -H "x-api-key:#{API_KEY}" https://api.newrelic.com/api/v1/applications/#{APP_ID}/metrics.json`
+  JSON.parse(response)
+end
+
+def parse_options
+  banner = nil
+  OptionParser.new do |opts|
+    banner = opts
+    opts.banner = <<-BANNER.gsub(" "*6, "")
+      Analyze newrelic data.
+
+      Usage:
+          statsn-calls API-KEY ACCOUNT-ID APPLICATION-ID METRIC-NAME
+          statsn-calls asdhgjasdgjhdasjgahsdasdjghsdjhg 123 1234567 Controller/users/index
+
+          statsn-calls API-KEY ACCOUNT-ID APPLICATION-ID METRIC-PREFIX
+          statsn-calls asdhgjasdgjhdasjgahsdasdjghsdjhg 123 1234567 Controller/users/*
+
+      Options:
+      BANNER
+    opts.on("-h", "--help", "Show this.") { puts opts; exit }
+  end.parse!
+  banner
+end
+
+def metric_names(namespace)
+  if namespace.end_with?("*")
+    namespace = namespace.sub("*", "")
+    metrics.select { |m| m["name"].start_with?(namespace) }.map { |m| m["name"] }
+  else
+    [namespace]
+  end
+end
+
+# Dependencies
+gem "json"
+gem "faraday"
+
+require "json"
+require "faraday"
+require "optparse"
+
+# ARGS
+options = parse_options
+unless ARGV.size == 4
+  puts options
+  exit 1
+end
+API_KEY, ACCOUNT_ID, APP_ID, namespace = ARGV
+
+# Data
+names = metric_names(namespace)
+results = ["call_count", "total_call_time"].map do |field|
+  metric_data = aggregate(names, field).group_by{ |x| x["name"] }
+  sums = metric_data.map{ |_, values| values.inject(0){ |sum,x| sum + x[field] } }.inject(:+)
+  [field, sums]
+end
+
+# Display results
+results = Hash[results]
+if results.values.first
+  call_time = results["total_call_time"]
+  call_count = results["call_count"]
+  puts results.map{|x|x.join(": ")}
+  puts "response time: #{call_time / call_count}"
+  puts "call per second: #{call_count / PERIOD}"
+else
+  puts "No data found for #{names.join(", ")} in last #{PERIOD} seconds"
+  exit 1
+end
