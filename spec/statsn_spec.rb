@@ -12,21 +12,17 @@ describe Statsn do
 
   describe ".increment" do
     it "calls count api with 1" do
-      NewRelic::MethodTraceStats.any_instance.should_receive(:record_data_point).with(1)
+      NewRelic::Agent::Stats.any_instance.should_receive(:record_data_point).with(1)
       Statsn.increment("xxx")
     end
 
     it "calls count api with given number" do
-      NewRelic::MethodTraceStats.any_instance.should_receive(:record_data_point).with(3)
+      NewRelic::Agent::Stats.any_instance.should_receive(:record_data_point).with(3)
       Statsn.increment("xxx", 3)
     end
   end
 
   describe ".time" do
-    before do
-      NewRelic::Agent.is_execution_traced?.should == true
-    end
-
     it "returns block result" do
       Statsn.time("xxx"){ 4 }.should == 4
     end
@@ -38,7 +34,7 @@ describe Statsn do
     end
 
     it "records used time" do
-      NewRelic::MethodTraceStats.any_instance.should_receive(:trace_call).with{|x| x.should be_within(0.05).of(0.1) }
+      NewRelic::Agent::Stats.any_instance.should_receive(:record_data_point).with{|x| x.should be_within(0.05).of(0.1) }
       Statsn.time("xxx"){ sleep 0.1 }
     end
   end
