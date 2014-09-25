@@ -50,6 +50,10 @@ describe Statsn do
       Statsn.send(:key, "xxx").should == "xxx"
     end
 
+    it "builds with a string" do
+      Statsn.send(:key, ["Foobar::Bar", "xxx"]).should == "Custom/Foobar/Bar/xxx"
+    end
+
     it "builds with a class and name" do
       Statsn.send(:key, [Foobar::TestClass, "xxx"]).should == "Custom/Foobar/TestClass/xxx"
     end

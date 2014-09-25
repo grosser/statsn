@@ -26,8 +26,13 @@ module Statsn
     def key(who)
       if who.is_a?(Array)
         model = who.first
-        model = (model.is_a?(Class) ? model.name : model.class.name).gsub("::", "/")
-        [PREFIX, model, *who[1..-1]].compact.join("/")
+        model = case model
+        when String then model
+        when Class then model.name
+        else
+          model.class.name
+        end
+        [PREFIX, model.gsub("::", "/"), *who[1..-1]].compact.join("/")
       else
         who
       end
